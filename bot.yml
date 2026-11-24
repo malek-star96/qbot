@@ -5,15 +5,29 @@ on:
   schedule:
     - cron: '0 */6 * * *'
 
+permissions:
+  contents: read
+
 jobs:
   run:
     runs-on: ubuntu-latest
     timeout-minutes: 350
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: pip
-      - run: pip install -r requirements.txt
-      - run: python bot.py
+
+      - name: Install requirements
+        run: pip install -r requirements.txt
+
+      - name: Check environment
+        run: |
+          python -c "import os; from dotenv import load_dotenv; load_dotenv(); print('BOT_TOKEN:', bool(os.getenv('BOT_TOKEN'))); print('VENICE_API_KEY:', bool(os.getenv('VENICE_API_KEY'))); print('VENICE_MODEL:', os.getenv('VENICE_MODEL', 'missing'))"
+
+      - name: Run Bot
+        run: python bot.py
