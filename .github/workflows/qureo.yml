@@ -1,0 +1,63 @@
+name: qureo
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "probe للفحص، bot للتشغيل"
+        type: choice
+        options: [probe, bot]
+        default: probe
+      course:
+        description: "js أو py (probe فقط)"
+        default: js
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qureo
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - run: python -m playwright install --with-deps chromium
+
+      - name: probe
+        if: inputs.mode == 'probe'
+        env:
+          Q_USER: ${{ secrets.Q_USER }}
+          Q_PASS: ${{ secrets.Q_PASS }}
+          Q_COURSE: ${{ inputs.course }}
+          HEADLESS: "1"
+        run: python probe.py
+
+      - name: bot
+        if: inputs.mode == 'bot'
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          VENICE_API_KEY: ${{ secrets.VENICE_API_KEY }}
+          VENICE_MODEL: ${{ secrets.VENICE_MODEL }}
+          HEADLESS: "1"
+        run: python bot.py
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: probe-${{ github.run_number }}
+          path: |
+            probe_*.html
+            probe_*.png
+          if-no-files-found: ignore
